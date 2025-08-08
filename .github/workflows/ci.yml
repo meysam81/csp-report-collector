@@ -1,0 +1,160 @@
+name: ci
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+  checks:
+    permissions:
+      contents: read
+      pull-requests: read
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 1.24
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v8
+        with:
+          version: v2.1
+
+  build-dev:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Cache docker
+        uses: actions/cache@v4
+        id: cache
+        with:
+          path: |
+            /tmp/dockercache
+          key: docker-cache-${{ runner.os }}-${{ hashFiles('**/Dockerfile') }}
+          restore-keys: |
+            docker-cache-${{ runner.os }}-
+      - name: Build docker
+        uses: meysam81/build-docker@main
+        with:
+          build-args: |
+            VERSION=dev-${{ github.sha }}
+            COMMIT=${{ github.sha }}
+            DATE=${{ github.event.head_commit.timestamp }}
+            BUILT_BY=github-actions
+          cache-from: type=local,src=/tmp/dockercache
+          cache-to: type=local,dest=/tmp/dockercache
+          checkout: false
+          cosign: true
+          image-name: ghcr.io/${{ github.repository }}
+          image-extra-tags: |
+            ghcr.io/${{ github.repository }}:latest
+            ghcr.io/${{ github.repository }}:${{ github.run_id }}
+            ghcr.io/${{ github.repository }}:${{ github.sha }}
+          kubescape: true
+
+  release-please:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    outputs:
+      releases_created: ${{ steps.release-please.outputs.releases_created }}
+      tag_name: ${{ steps.release-please.outputs.tag_name }}
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    steps:
+      - id: release-please
+        name: Release please
+        uses: googleapis/release-please-action@v4
+        with:
+          release-type: go
+
+  build-prod:
+    needs: release-please
+    if: needs.release-please.outputs.releases_created == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+      issues: write
+      pull-requests: write
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.release-please.outputs.tag_name }}
+      - name: Cache docker
+        uses: actions/cache@v4
+        id: cache
+        with:
+          path: |
+            /tmp/dockercache
+          key: docker-cache-${{ runner.os }}-${{ hashFiles('**/Dockerfile') }}
+          restore-keys: |
+            docker-cache-${{ runner.os }}-
+      - name: Install syft
+        uses: anchore/sbom-action/download-syft@v0
+      - name: Setup Cosign CLI
+        uses: sigstore/cosign-installer@v3
+      - name: Setup bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Install goreleaser
+        run: |
+          echo 'deb [trusted=yes] https://repo.goreleaser.com/apt/ /' | sudo tee /etc/apt/sources.list.d/goreleaser.list
+          sudo apt update
+          sudo apt install -y goreleaser
+          goreleaser --version
+      - name: Build docker
+        uses: meysam81/build-docker@main
+        with:
+          build-args: |
+            VERSION=${{ needs.release-please.outputs.tag_name }}
+            COMMIT=${{ github.sha }}
+            DATE=${{ github.event.head_commit.timestamp }}
+            BUILT_BY=github-actions
+          cache-from: type=local,src=/tmp/dockercache
+          cache-to: type=local,dest=/tmp/dockercache
+          checkout: false
+          cosign: true
+          image-name: ghcr.io/${{ github.repository }}
+          image-extra-tags: |
+            ghcr.io/${{ github.repository }}:${{ needs.release-please.outputs.tag_name }}
+          kubescape: true
+      - env:
+          GITHUB_TOKEN: ${{ github.token }}
+        name: Run goreleaser
+        run: goreleaser release --release-notes CHANGELOG.md --clean
+
+  lychee:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Cache lychee
+        uses: actions/cache@v4
+        with:
+          key: lychee-${{ runner.os }}-${{ hashFiles('**/lychee.toml') }}
+          path: .lycheecache
+          restore-keys: |
+            lychee-
+      - id: lychee
+        name: Link Checker
+        uses: lycheeverse/lychee-action@v2
+        with:
+          fail: ${{ github.ref == 'refs/heads/main' }}
+          failIfEmpty: false
