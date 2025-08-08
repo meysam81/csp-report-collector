@@ -18,9 +18,10 @@ func NewLogger(logLevel string) *logging.Logger {
 
 func NewApp(ctx context.Context, c *Config) (*AppState, error) {
 	root := chimux.NewChi()
-	api := chimux.NewChi(chimux.WithHealthz(), chimux.WithLoggingMiddleware(), chimux.WithMetrics())
+	mw := chimux.NewChi(chimux.WithLoggingMiddleware())
+	api := chimux.NewChi(chimux.WithHealthz(), chimux.WithMetrics())
 
-	root.Mount("/", api)
+	root.Mount("/", mw)
 
 	s := &http.Server{
 		Addr:         fmt.Sprintf(":%d", c.Port),
@@ -43,8 +44,11 @@ func NewApp(ctx context.Context, c *Config) (*AppState, error) {
 		redisClient: redisClient,
 		handler:     s,
 		logger:      logger,
+		config:      c,
 	}
 
+	mw.Use(app.RateLimitMiddleware)
+	mw.Mount("/", api)
 	api.Post("/", app.ReceiverCSPViolation)
 
 	return app, nil

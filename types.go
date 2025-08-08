@@ -33,4 +33,5 @@ type AppState struct {
 	redisClient *redis.Client
 	logger      *logging.Logger
 	handler     *http.Server
+	config      *Config
 }

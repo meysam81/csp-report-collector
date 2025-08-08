@@ -16,6 +16,9 @@ type Config struct {
 	RedisDB          int    `koanf:"redis.db"`
 	RedisPassword    string `koanf:"redis.password"`
 	RedisSSLRequired bool   `koanf:"redis.ssl-enabled"`
+
+	RateLimitMaxRPS     int     `koanf:"ratelimit.max"`
+	RateLimitRefillRate float32 `koanf:"ratelimit.refill"`
 }
 
 func (c *Config) Validate() error {
@@ -34,11 +37,13 @@ func (c *Config) Validate() error {
 
 func NewConfig() (*Config, error) {
 	defaults := map[string]interface{}{
-		"port":       8080,
-		"log-level":  "info",
-		"redis.host": "localhost",
-		"redis.port": 6379,
-		"redis.db":   0,
+		"port":             8080,
+		"log-level":        "info",
+		"redis.host":       "localhost",
+		"redis.port":       6379,
+		"redis.db":         0,
+		"ratelimit.max":    20,
+		"ratelimit.refill": 2.0,
 	}
 
 	c := &Config{}
