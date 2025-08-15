@@ -6,7 +6,7 @@ require (
 	github.com/go-chi/chi/v5 v5.2.2
 	github.com/goccy/go-json v0.10.5
 	github.com/meysam81/x v1.11.2
-	github.com/redis/go-redis/v9 v9.12.0
+	github.com/redis/go-redis/v9 v9.12.1
 )
 
 require (
