@@ -19,8 +19,6 @@ type Config struct {
 
 	RateLimitMaxRPS     int     `koanf:"ratelimit.max"`
 	RateLimitRefillRate float32 `koanf:"ratelimit.refill"`
-
-	AllowedContentTypes []string `koanf:"allowed-content-types"`
 }
 
 func (c *Config) Validate() error {
