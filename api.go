@@ -3,13 +3,14 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/goccy/go-json"
 )
 
 var (
-	ErrBadContentType = []byte(`{"status":"failed","message":"Bad content-type provided. Only application/reports+json is acceptable."}`)
+	ErrBadContentType = []byte(`{"status":"failed","message":"Bad content-type provided. Only application/reports+json, application/csp-report & application/json is acceptable."}`)
 	ErrInvalidBody    = []byte(`{"status":"failed","message":"Invalid body provided. Only JSON-serializable strings are acceptable."}`)
 	ErrInternalError  = []byte(`{"status":"failed","message":"Failed processing your request. Please try again or contacty administrator."}`)
 )
@@ -38,6 +39,11 @@ func (a *AppState) respondWithInterface(w http.ResponseWriter, obj interface{}, 
 
 func (a *AppState) ReceiverCSPViolation(w http.ResponseWriter, r *http.Request) {
 	contentType := r.Header.Get("content-type")
+	if idx := strings.Index(contentType, ";"); idx != -1 {
+		contentType = strings.TrimSpace(contentType[:idx])
+	}
+	contentType = strings.ToLower(contentType)
+
 	var cspreport []byte
 
 	switch contentType {
@@ -57,8 +63,7 @@ func (a *AppState) ReceiverCSPViolation(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 
-	case "application/csp-report":
-	case "application/json":
+	case "application/csp-report", "application/json":
 		reporturi := &ReportURI{}
 		err := json.NewDecoder(r.Body).Decode(reporturi)
 		if err != nil {
@@ -88,7 +93,7 @@ func (a *AppState) ReceiverCSPViolation(w http.ResponseWriter, r *http.Request) 
 
 	a.logger.Info().Bytes("csp_report", cspreport).Msg("received a csp violation report")
 
-	now := fmt.Sprintf("%d", time.Now().Unix())
+	now := fmt.Sprintf("csp:%d", time.Now().UnixNano())
 	_, err := a.redisClient.Set(r.Context(), now, cspreport, 0).Result()
 	if err != nil {
 		a.logger.Error().Err(err).Msg("failed saving body to redis.")
