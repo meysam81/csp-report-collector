@@ -6,6 +6,25 @@
 
 Lightweight service to collect and persist Content Security Policy (CSP) violation reports in Redis for audit and investigation.
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Quick Start](#quick-start)
+- [Configure Your CSP Header](#configure-your-csp-header)
+  - [Legacy Format (report-uri)](#legacy-format-report-uri)
+  - [Modern Format (report-to)](#modern-format-report-to)
+  - [Hybrid Approach (Recommended)](#hybrid-approach-recommended)
+- [Configuration](#configuration)
+- [Data Storage](#data-storage)
+- [Report Formats](#report-formats)
+  - [Legacy Report-URI Format](#legacy-report-uri-format)
+  - [Modern Reporting API Format](#modern-reporting-api-format)
+- [Docker Compose Example](#docker-compose-example)
+- [Rate Limiting](#rate-limiting)
+- [License](#license)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 ## Quick Start
 
 ```bash
@@ -16,25 +35,35 @@ docker run --rm -dp 8080:8080 \
 
 ## Configure Your CSP Header
 
-Point your CSP reporting to the collector:
+The collector supports both legacy and modern CSP reporting formats:
+
+### Legacy Format (report-uri)
+
+For older browsers and simpler setups:
 
 ```shell
 Content-Security-Policy: default-src 'self'; report-uri https://your-domain.com:8080/
 ```
 
-Or with the Reporting API:
+This sends reports with `Content-Type: application/csp-report` or `application/json`.
+
+### Modern Format (report-to)
+
+For modern browsers with enhanced reporting capabilities:
 
 ```shell
 Content-Security-Policy: default-src 'self'; report-to csp-endpoint
 Report-To: {"group":"csp-endpoint","max_age":86400,"endpoints":[{"url":"https://your-domain.com:8080/"}]}
 ```
 
-## Configuration
+This sends reports with `Content-Type: application/reports+json`.
 
-All configuration follows the 12-factor app methodology via environment variables:
+### Hybrid Approach (Recommended)
+
+For maximum compatibility, use both directives:
 
 ```shell
-Content-Security-Policy: default-src 'self'; report-to csp-endpoint
+Content-Security-Policy: default-src 'self'; report-uri https://your-domain.com:8080/; report-to csp-endpoint
 Report-To: {"group":"csp-endpoint","max_age":86400,"endpoints":[{"url":"https://your-domain.com:8080/"}]}
 ```
 
@@ -62,9 +91,27 @@ CSP reports are stored in Redis with:
 - **Value**: Full JSON report
 - **TTL**: Indefinite (configure Redis eviction policy as needed)
 
-## Example Report Format
+## Report Formats
 
-The collector accepts standard CSP violation reports:
+The collector accepts both CSP reporting formats:
+
+### Legacy Report-URI Format
+
+```json
+{
+  "csp-report": {
+    "blocked-uri": "inline",
+    "document-uri": "https://example.com/page",
+    "effective-directive": "script-src-elem",
+    "original-policy": "default-src 'self'",
+    "referrer": "https://example.com/",
+    "status-code": 200,
+    "violated-directive": "script-src-elem"
+  }
+}
+```
+
+### Modern Reporting API Format
 
 ```json
 {
