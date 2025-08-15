@@ -3,14 +3,10 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"slices"
 	"time"
 
 	"github.com/goccy/go-json"
-)
-
-const (
-	ExpectedContentType  = "application/reports+json"
-	ExpectedContentType2 = "application/json"
 )
 
 var (
@@ -42,7 +38,7 @@ func (a *AppState) respondWithInterface(w http.ResponseWriter, obj interface{}, 
 
 func (a *AppState) ReceiverCSPViolation(w http.ResponseWriter, r *http.Request) {
 	contentType := r.Header.Get("content-type")
-	if contentType != ExpectedContentType && contentType != ExpectedContentType2 {
+	if !slices.Contains(a.config.AllowedContentTypes, contentType) {
 		a.logger.Error().Str("content_type", contentType).Msg("invalid content type rejected.")
 		a.respondWithInterface(w, ErrBadContentType, http.StatusBadRequest)
 		return

@@ -19,6 +19,8 @@ type Config struct {
 
 	RateLimitMaxRPS     int     `koanf:"ratelimit.max"`
 	RateLimitRefillRate float32 `koanf:"ratelimit.refill"`
+
+	AllowedContentTypes []string `koanf:"allowed-content-types"`
 }
 
 func (c *Config) Validate() error {
@@ -37,13 +39,14 @@ func (c *Config) Validate() error {
 
 func NewConfig() (*Config, error) {
 	defaults := map[string]interface{}{
-		"port":             8080,
-		"log-level":        "info",
-		"redis.host":       "localhost",
-		"redis.port":       6379,
-		"redis.db":         0,
-		"ratelimit.max":    20,
-		"ratelimit.refill": 2.0,
+		"port":                  8080,
+		"log-level":             "info",
+		"redis.host":            "localhost",
+		"redis.port":            6379,
+		"redis.db":              0,
+		"ratelimit.max":         20,
+		"ratelimit.refill":      2.0,
+		"allowed-content-types": []string{"application/csp-report", "application/json", "application/reports+json"},
 	}
 
 	c := &Config{}
