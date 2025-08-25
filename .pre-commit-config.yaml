@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/oxc-project/mirrors-oxlint
-    rev: v1.11.1
+    rev: v1.12.0
     hooks:
       - id: oxlint
         verbose: false
@@ -36,7 +36,6 @@ repos:
       - id: check-builtin-literals
       - id: check-case-conflict
       - id: check-builtin-literals
-      - id: check-byte-order-marker
       - id: check-case-conflict
       - id: check-docstring-first
       - id: check-merge-conflict
@@ -46,7 +45,6 @@ repos:
       - id: check-xml
       - id: debug-statements
       - id: destroyed-symlinks
-      - id: fix-byte-order-marker
       - id: fix-encoding-pragma
       - id: forbid-new-submodules
       - id: forbid-submodules
