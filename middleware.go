@@ -33,6 +33,7 @@ func (a *AppState) RateLimitMiddleware(next http.Handler) http.Handler {
 
 		if !rate.Allowed {
 			w.WriteHeader(http.StatusTooManyRequests)
+			w.Header().Set("retry-after", fmt.Sprintf("%d", rate.ResetAt().Second()))
 			_, err := w.Write(ErrTooManyRequests)
 			if err != nil {
 				a.logger.Error().Err(err).Msg("failed writing response body")

@@ -42,7 +42,7 @@ The collector supports both legacy and modern CSP reporting formats:
 For older browsers and simpler setups:
 
 ```shell
-Content-Security-Policy: default-src 'self'; report-uri https://your-domain.com:8080/
+Content-Security-Policy: default-src 'self'; report-uri https://csp.example.com
 ```
 
 This sends reports with `Content-Type: application/csp-report` or `application/json`.
@@ -53,18 +53,30 @@ For modern browsers with enhanced reporting capabilities:
 
 ```shell
 Content-Security-Policy: default-src 'self'; report-to csp-endpoint
-Report-To: {"group":"csp-endpoint","max_age":86400,"endpoints":[{"url":"https://your-domain.com:8080/"}]}
+Report-To: {"group":"csp-endpoint","max_age":86400,"endpoints":[{"url":"https://csp.example.com"}]}
 ```
 
 This sends reports with `Content-Type: application/reports+json`.
 
-### Hybrid Approach (Recommended)
+#### Alternative: Reporting Endpoints
 
-For maximum compatibility, use both directives:
+You can also use the newer `Reporting-Endpoints` header instead of `Report-To`:
 
 ```shell
-Content-Security-Policy: default-src 'self'; report-uri https://your-domain.com:8080/; report-to csp-endpoint
-Report-To: {"group":"csp-endpoint","max_age":86400,"endpoints":[{"url":"https://your-domain.com:8080/"}]}
+Content-Security-Policy: default-src 'self'; report-to csp-endpoint
+Reporting-Endpoints: csp-endpoint="https://csp.example.com"
+```
+
+The `Reporting-Endpoints` header provides a simpler syntax compared to `Report-To` and is supported by modern browsers.
+
+### Hybrid Approach (Recommended)
+
+For maximum compatibility, use all the headers to support old and new browsers:
+
+```shell
+Content-Security-Policy: default-src 'self'; report-uri https://csp.example.com; report-to csp-endpoint
+Report-To: {"group":"csp-endpoint","max_age":86400,"endpoints":[{"url":"https://csp.example.com"}]}
+Reporting-Endpoints: csp-endpoint="https://csp.example.com"
 ```
 
 ## Configuration

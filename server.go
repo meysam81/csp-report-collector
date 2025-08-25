@@ -50,6 +50,7 @@ func NewApp(ctx context.Context, c *Config) (*AppState, error) {
 	mw.Use(app.RateLimitMiddleware)
 	mw.Mount("/", api)
 	api.Post("/", app.ReceiverCSPViolation)
+	api.Get("/", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusNoContent) })
 
 	return app, nil
 }
